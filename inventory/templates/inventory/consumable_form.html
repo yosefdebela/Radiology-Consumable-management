@@ -1,0 +1,35 @@
+{% extends 'inventory/base.html' %}{% load static inventory_extras %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<header class="page-head"><h1>{{ title }}</h1></header>
+<form method="post" class="panel form narrow" data-suggest-url="{% url 'consumable_suggest' %}" {% if not consumable %}data-suggest="1"{% endif %}>{% csrf_token %}
+  {% include 'inventory/_fields.html' %}
+  <fieldset class="alts-box">
+    <legend>Alternative items <span class="muted">(optional)</span></legend>
+    <p class="help">Items that can replace this one when needed, for example another brand or size. Type a name: existing consumables and your list are suggested. A name that does not exist yet is created as a new consumable.</p>
+    <div id="alt-rows" data-names="{{ alt_names_json }}"></div>
+    <button type="button" class="btn small" id="add-alt">Add another alternative</button>
+  </fieldset>
+  <div class="actions"><button class="btn primary">Save consumable</button>
+  <a class="btn ghost" href="{% url 'consumable_list' %}">Cancel</a></div>
+</form>
+{% if not consumable %}
+<p class="muted small narrow">Start typing a name: matching items from your consumables list appear, and picking one fills in the category, unit, description and alternatives. If it is not in the list the text turns red, and it is still saved exactly as you typed it.
+  <a href="{% url 'catalog_import' %}">Manage the list</a>.</p>
+{% endif %}
+<script src="{% static 'inventory/suggest.js' %}"></script>
+{% if consumable %}
+<section class="panel narrow">
+  <h2>Used in {{ link_total }} examination{{ link_total|pluralize }}</h2>
+  {% if links %}
+  <ul class="plain">{% for l in links %}
+    <li><span class="chip mod-{{ l.examination.modality.slug }}">{{ l.examination.modality.name }}</span>
+      <a href="{{ l.examination.get_absolute_url }}">{{ l.examination.name }}</a>
+      <span class="muted">{{ l.quantity|qty }} {{ l.unit }}{% if not l.is_required %}, optional{% endif %}</span></li>{% endfor %}
+  </ul>
+  {% if link_total > 15 %}<p class="muted small">Showing the first 15.</p>{% endif %}
+  <p class="muted small">This consumable cannot be deleted while it is used. Untick Active to retire it instead.</p>
+  {% else %}<p class="muted">Not used by any examination yet.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

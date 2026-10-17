@@ -1,0 +1,12 @@
+<tr class="newrow" data-prefix="{{ nf.prefix }}">
+  <td>{{ nf.consumable }}</td>
+  <td>{{ nf.quantity }}</td>
+  <td>{{ nf.unit }}</td>
+  <td><select class="input newtype" form="{{ form_id }}" name="{{ nf.is_required.html_name }}" aria-label="Type" data-hides="{{ nf.prefix }}-rep">
+    <option value="on" {% if not nf.is_bound or nf.is_required.value %}selected{% endif %}>Required</option>
+    <option value="" {% if nf.is_bound and not nf.is_required.value %}selected{% endif %}>Optional</option></select></td>
+  <td><div id="{{ nf.prefix }}-rep" {% if not nf.is_bound or nf.is_required.value %}hidden{% endif %}>{{ nf.replaces }}</div></td>
+  <td>{{ nf.notes }}</td>
+  <td class="nowrap"><button type="button" class="btn small ghost newdel">Clear</button>
+    {% for field, errs in nf.errors.items %}<div class="err">{{ errs|join:" " }}</div>{% endfor %}</td>
+</tr>

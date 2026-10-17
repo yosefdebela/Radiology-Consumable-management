@@ -1,0 +1,24 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Export to Excel{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Export to Excel</h1></header>
+<form method="get" class="panel form narrow">
+  <input type="hidden" name="download" value="1">
+  <div class="field"><label>Layout</label>
+    <label class="check-label layout-opt"><input class="check" type="radio" name="layout" value="exam" checked>
+      <span><strong>Exam view</strong> (one block per examination)</span></label>
+    <div class="help layout-help">Modality, examination and machine code (like L00761) in merged cells on the left, its required consumables in rows beside them with quantity and unit, and the optional items shown as replacements if the required item is unavailable. Optional items are lined up with the required item they replace (set with <em>Replaces</em> on the examination page, or through the item's alternatives). Any that are not linked appear in an extra column.</div>
+    <label class="check-label layout-opt"><input class="check" type="radio" name="layout" value="full">
+      <span><strong>Full data workbook</strong></span></label>
+    <div class="help layout-help">Four sheets: Modalities (counts), Examination consumables (one row per consumable, with notes and alternatives), Consumables and Saved sets.</div>
+  </div>
+  <div class="field"><label for="m">Modality</label>
+    <select class="input" id="m" name="modality">
+      <option value="">All modalities</option>
+      {% for m in modalities %}<option value="{{ m.slug }}" {% if selected == m.slug %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+    </select></div>
+  <div class="field field-check"><label class="check-label"><input class="check" type="checkbox" name="empty" value="1" checked> Include examinations that have no consumables yet</label></div>
+  <div class="field field-check"><label class="check-label"><input class="check" type="checkbox" name="inactive" value="1"> Include inactive examinations</label></div>
+  <div class="actions"><button class="btn primary">Download Excel file</button></div>
+</form>
+{% endblock %}

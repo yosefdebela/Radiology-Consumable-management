@@ -1,0 +1,114 @@
+{% extends 'inventory/base.html' %}{% load static inventory_extras %}
+{% block title %}{{ exam.name }}{% endblock %}
+{% block content %}
+{% if perm.can_edit %}<form id="examform" method="post" novalidate action="{% url 'exam_save_all' exam.pk %}" data-track {% if dirty_start %}data-dirty-start="1"{% endif %}>{% csrf_token %}</form>{% endif %}
+<header class="page-head mod-{{ exam.modality.slug }}">
+  <div>
+    <a class="crumb" href="{{ exam.modality.get_absolute_url }}"><span class="dot"></span>{{ exam.modality.name }}</a>
+    <h1>{{ exam.name }}{% if not exam.is_active %} <span class="tag">inactive</span>{% endif %}</h1>
+    <p class="muted">{% if exam.code %}Code {{ exam.code }}{% endif %}{% if exam.subcategory %}{% if exam.code %} - {% endif %}{{ exam.subcategory }}{% endif %}</p>
+    {% if exam.notes %}<p class="note">{{ exam.notes }}</p>{% endif %}
+  </div>
+  <div class="actions">
+    {% if perm.can_edit %}
+    <a class="btn" href="{% url 'exam_edit' exam.pk %}">Edit examination</a>
+    <form class="inline" method="post" action="{% url 'exam_toggle' exam.pk %}">{% csrf_token %}
+      <button class="btn ghost">{% if exam.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+    {% endif %}
+    {% if not exam.is_active and perm.can_delete %}
+    <form class="inline" method="post" action="{% url 'exam_delete' exam.pk %}" onsubmit="return confirm('Permanently delete this examination{% if rows %} and its {{ rows|length }} consumable assignment(s){% endif %}? This cannot be undone.')">{% csrf_token %}
+      <button class="btn danger">Delete examination</button></form>
+    {% endif %}
+  </div>
+</header>
+
+<section class="panel">
+  <h2>Consumables used <span class="muted">({{ rows|length }})</span></h2>
+  {% if rows %}
+  <table class="table consumables">
+    <thead><tr><th>Consumable</th><th>Quantity</th><th>Unit</th><th>Required</th><th>Notes</th>{% if perm.can_delete %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for link, f in rows %}
+    <tr class="{% if not link.consumable.is_active %}inactive{% endif %}">
+      <td><strong>{{ link.consumable.name }}</strong>
+        {% if link.consumable.category %}<div class="muted small">{{ link.consumable.category }}</div>{% endif %}
+        {% if not link.consumable.is_active %}<span class="tag">inactive</span>{% endif %}
+        {% if f.errors %}<div class="err">{% for field, errs in f.errors.items %}{{ errs|join:" " }} {% endfor %}</div>{% endif %}
+        {% with alts=link.consumable.alternative_links.all %}{% if alts %}
+        <div class="alts">Alternatives: {% for a in alts %}{{ a.alternative.name }}{% if not a.alternative.is_active %} (inactive){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+          {% if perm.can_change %}
+          <select form="examform" class="input swap-sel" name="{{ f.prefix }}-swap" aria-label="Use an alternative instead of {{ link.consumable.name }}">
+            <option value="">Keep {{ link.consumable.name }}</option>
+            {% for a in alts %}{% if a.alternative.is_active %}<option value="{{ a.alternative.pk }}" {% if f.swap_value == a.alternative.pk|stringformat:'s' %}selected{% endif %}>Use {{ a.alternative.name }} instead</option>{% endif %}{% endfor %}
+          </select>
+          {% endif %}
+        </div>{% endif %}{% endwith %}</td>
+      {% if perm.can_change %}
+      <td><input form="examform" class="input qty" type="number" step="{% if link.unit.allow_decimals %}0.01{% else %}1{% endif %}" min="{% if link.unit.allow_decimals %}0.01{% else %}1{% endif %}" name="{{ f.quantity.html_name }}" value="{{ f.quantity.value|qty }}"></td>
+      <td><select form="examform" class="input unit-sel" name="{{ f.unit.html_name }}">
+        {% for u in f.fields.unit.queryset %}<option value="{{ u.pk }}" data-dec="{% if u.allow_decimals %}1{% else %}0{% endif %}" {% if u.pk|stringformat:'s' == f.unit.value|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select></td>
+      <td><select form="examform" class="input req-sel" name="{{ f.is_required.html_name }}" data-hides="rep{{ link.pk }}" data-cid="{{ link.consumable_id }}" data-cname="{{ link.consumable.name }}">
+        <option value="on" {% if f.is_required.value %}selected{% endif %}>Required</option>
+        <option value="" {% if not f.is_required.value %}selected{% endif %}>Optional</option></select>
+        <select form="examform" class="input replaces-sel" id="rep{{ link.pk }}" name="{{ f.replaces.html_name }}" aria-label="Replaces" data-own="{{ link.consumable_id }}" data-value="{{ f.replaces.value|default_if_none:'' }}" {% if f.is_required.value %}hidden{% endif %}>
+          <option value="">Replaces: not linked</option>
+          {% for c in f.fields.replaces.queryset %}<option value="{{ c.pk }}" {% if c.pk|stringformat:'s' == f.replaces.value|stringformat:'s' %}selected{% endif %}>Replaces {{ c.name }}</option>{% endfor %}
+        </select></td>
+      <td><input form="examform" class="input" type="text" maxlength="255" name="{{ f.notes.html_name }}" value="{{ f.notes.value|default_if_none:'' }}" placeholder="Optional note"></td>
+      {% else %}
+      <td>{{ link.quantity|qty }}</td>
+      <td>{{ link.unit }}</td>
+      <td>{% if link.is_required %}Required{% else %}<span class="muted">Optional</span>{% if link.replaces %}<div class="muted small">replaces {{ link.replaces.name }}</div>{% endif %}{% endif %}</td>
+      <td class="muted">{{ link.notes }}</td>
+      {% endif %}
+      {% if perm.can_delete %}
+      <td class="right nowrap"><label class="check-label removebox"><input class="check rowremove" type="checkbox" form="examform" name="{{ f.prefix }}-remove" value="1" {% if f.remove_checked %}checked{% endif %}> Remove</label></td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No consumables recorded for this examination yet.{% if perm.can_edit %} Add the first one below, apply a saved set, or copy a list from a similar examination.{% endif %}</p>
+  {% endif %}
+</section>
+
+{% if perm.can_edit %}
+<section class="panel">
+  <h2>Add consumables</h2>
+  <p class="muted small">Fill in as many rows as you need: required items, optional items and what they replace. Everything is saved together when you press <strong>Save changes</strong>.</p>
+  {% if consumable_count %}
+  <table class="table newitems">
+    <thead><tr><th>Consumable</th><th>Qty</th><th>Unit</th><th>Type</th><th>Replaces (if unavailable)</th><th>Notes</th><th></th></tr></thead>
+    <tbody id="newitems">{% for nf in new_forms %}{% include 'inventory/_newrow.html' %}{% endfor %}</tbody>
+  </table>
+  <p><button type="button" class="btn small" id="add-new-row">Add another row</button></p>
+  <template id="new-row-tpl">{% with nf=tpl_form %}{% include 'inventory/_newrow.html' %}{% endwith %}</template>
+  {{ consumable_units|json_script:"consumable-units" }}
+  {% else %}
+  <p class="empty">There are no active consumables yet. <a href="{% url 'consumable_create' %}">Add a consumable</a> first.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Also when you save</h2>
+  <div class="add-row">
+    {% if sets %}<div class="field grow"><label for="apply_set">Apply a saved set</label>
+      <select class="input" id="apply_set" name="apply_set" form="examform"><option value="">None</option>
+        {% for st in sets %}<option value="{{ st.pk }}" {% if posted.apply_set == st.pk|stringformat:'s' %}selected{% endif %}>{{ st.name }}</option>{% endfor %}</select></div>{% endif %}
+    {% if copy_form.fields.source.queryset.exists %}<div class="field grow"><label for="copy_from">Copy consumables from a similar examination</label>
+      <select class="input" id="copy_from" name="copy_from" form="examform"><option value="">None</option>
+        {% for e in copy_form.fields.source.queryset %}<option value="{{ e.pk }}" {% if posted.copy_from == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.modality.name }}: {{ e.name }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="field grow"><label for="save_as_set">Save the result as a reusable set</label>
+      <input class="input" type="text" id="save_as_set" name="save_as_set" form="examform" maxlength="120" value="{{ posted.save_as_set }}" placeholder="Set name, e.g. CT contrast standard"></div>
+  </div>
+  <p class="muted small">Consumables already on this examination are left as they are. <a href="{% url 'bulk_apply' %}?exam={{ exam.pk }}">Apply consumables to several examinations at once</a> or <a href="{% url 'set_list' %}">manage sets</a>.</p>
+</section>
+
+<div class="savebar" id="savebar">
+  <span class="savenote" id="savenote">No unsaved changes</span>
+  <button class="btn primary" form="examform">Save changes</button>
+</div>
+<script src="{% static 'inventory/rows.js' %}"></script>
+{% endif %}
+{% endblock %}

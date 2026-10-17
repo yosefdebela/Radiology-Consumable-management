@@ -1,0 +1,19 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Modalities{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Modalities</h1></header>
+<div class="two-col">
+<section class="panel">
+  <table class="table"><thead><tr><th>Modality</th><th class="right">Examinations</th><th></th></tr></thead><tbody>
+  {% for m in modalities %}
+  <tr><td><span class="dot" style="background:{{ m.color }}"></span>{{ m.name }}</td><td class="right">{{ m.n }}</td>
+    <td class="right nowrap"><a class="btn small ghost" href="{% url 'modality_edit' m.pk %}">Edit</a>
+      {% if m.n == 0 %}<form class="inline" method="post" action="{% url 'modality_delete' m.pk %}" onsubmit="return confirm('Delete {{ m.name|escapejs }}?')">{% csrf_token %}<button class="btn small danger">Delete</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table>
+  <p class="muted small">A modality can only be deleted while it has no examinations. You can also create one while adding an examination.</p>
+</section>
+<form method="post" class="panel form"><h2>Add modality</h2>{% csrf_token %}
+  {% include 'inventory/_fields.html' %}<button class="btn primary">Add modality</button></form>
+</div>
+{% endblock %}

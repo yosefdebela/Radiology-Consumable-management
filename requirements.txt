@@ -1,0 +1,4 @@
+Django>=5.1
+openpyxl>=3.1
+waitress>=3.0
+whitenoise>=6.6

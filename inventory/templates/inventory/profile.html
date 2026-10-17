@@ -1,0 +1,23 @@
+{% extends 'inventory/base.html' %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<header class="page-head"><h1>My profile</h1></header>
+<div class="two-col">
+<section class="panel">
+  <h2>{{ request.user.get_full_name|default:request.user.username }}</h2>
+  <table class="table"><tbody>
+    <tr><td class="muted">Username</td><td>{{ request.user.username }}</td></tr>
+    <tr><td class="muted">Account type</td><td>{% if perm.is_admin %}Administrator{% else %}Standard user{% endif %}</td></tr>
+    <tr><td class="muted">Allowed to</td><td>
+      View data: yes<br>
+      Add data: {% if perm.can_edit %}yes{% else %}no{% endif %}<br>
+      Change consumables already entered: {% if perm.can_change %}yes{% else %}no{% endif %}<br>
+      Delete data: {% if perm.can_delete %}yes{% else %}no{% endif %}<br>
+      Manage users: {% if perm.is_admin %}yes{% else %}no{% endif %}</td></tr>
+  </tbody></table>
+  {% if not perm.is_admin %}<p class="muted small">Need more access? Ask an administrator to change your account.</p>{% endif %}
+</section>
+<form method="post" class="panel form"><h2>Change my password</h2>{% csrf_token %}
+  {% include 'inventory/_fields.html' %}<button class="btn primary">Change password</button></form>
+</div>
+{% endblock %}

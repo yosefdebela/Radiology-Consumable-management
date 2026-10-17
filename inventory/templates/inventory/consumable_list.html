@@ -1,0 +1,57 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Consumables{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Consumables</h1>
+  {% if perm.can_edit %}<div class="actions"><a class="btn" href="{% url 'catalog_import' %}">Import list from Excel</a>
+  <a class="btn primary" href="{% url 'consumable_create' %}">Add consumable</a></div>{% endif %}</header>
+
+<form class="filters" method="get">
+  <input class="input grow" type="search" name="q" value="{{ q }}" placeholder="Search consumables">
+  <select class="input" name="category">
+    <option value="">All categories</option>
+    <option value="none" {% if cat == 'none' %}selected{% endif %}>Uncategorized</option>
+    {% for c in categories %}<option value="{{ c.pk }}" {% if cat == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select class="input" name="status">
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+  </select>
+  <button class="btn">Search</button>
+  {% if q or cat or status != 'active' %}<a class="btn ghost" href="{% url 'consumable_list' %}">Clear</a>{% endif %}
+</form>
+
+<p class="muted small">{{ page.paginator.count }} consumable(s)</p>
+<table class="table">
+  <thead><tr><th>Name</th><th>Category</th><th>Default unit</th><th class="right">Used in</th><th></th></tr></thead>
+  <tbody>
+  {% for c in page %}
+  <tr class="{% if not c.is_active %}inactive{% endif %}">
+    <td>{% if perm.can_change %}<a href="{% url 'consumable_edit' c.pk %}"><strong>{{ c.name }}</strong></a>{% else %}<strong>{{ c.name }}</strong>{% endif %}{% if not c.is_active %} <span class="tag">inactive</span>{% endif %}
+      {% if c.description %}<div class="muted small">{{ c.description }}</div>{% endif %}
+      {% with alts=c.alternative_links.all %}{% if alts %}<div class="alts">Alternatives: {% for a in alts %}{{ a.alternative.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}{% endwith %}</td>
+    <td>{{ c.category|default:"-" }}</td>
+    <td>{{ c.default_unit }}</td>
+    <td class="right">{{ c.n_exams }} exam{{ c.n_exams|pluralize }}</td>
+    <td class="right nowrap">
+      {% if perm.can_change %}
+      <a class="btn small ghost" href="{% url 'consumable_edit' c.pk %}">Edit</a>
+      <form class="inline" method="post" action="{% url 'consumable_toggle' c.pk %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn small ghost">{% if c.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+      {% endif %}
+      {% if perm.can_delete %}
+      {% if c.n_exams %}<a class="btn small ghost" href="{% url 'consumable_usage' c.pk %}">Remove from exams</a>{% endif %}
+      <form class="inline" method="post" action="{% url 'consumable_delete' c.pk %}"
+        onsubmit="return confirm('{% if c.n_exams %}This consumable is used by {{ c.n_exams }} examination(s). It will be deactivated, not deleted. Continue?{% else %}Delete {{ c.name|escapejs }} permanently?{% endif %}')">{% csrf_token %}
+        <button class="btn small danger">{% if c.n_exams %}Retire{% else %}Delete{% endif %}</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5" class="empty">No consumables match.{% if perm.can_edit %} <a href="{% url 'consumable_create' %}">Add a consumable</a>.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include 'inventory/_pager.html' %}
+{% endblock %}

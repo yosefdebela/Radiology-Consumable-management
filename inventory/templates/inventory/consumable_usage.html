@@ -1,0 +1,36 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Remove {{ consumable.name }} from examinations{% endblock %}
+{% block content %}
+<header class="page-head"><div>
+  <a class="crumb" href="{% url 'consumable_list' %}">Consumables</a>
+  <h1>{{ consumable.name }}{% if not consumable.is_active %} <span class="tag">inactive</span>{% endif %}</h1>
+  <p class="muted">Used on {{ total }} examination{{ total|pluralize }}.</p></div></header>
+
+<section class="panel narrow">
+  <h2>Where it is used</h2>
+  {% if rows %}
+  <table class="table"><thead><tr><th>Modality</th><th class="right">Examinations</th></tr></thead><tbody>
+    {% for r in rows %}<tr><td>{{ r.name }}</td><td class="right">{{ r.n }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p class="muted">No examination uses it.</p>{% endif %}
+  {% if in_sets %}<p class="small">It is also in {{ in_sets }} saved set item{{ in_sets|pluralize }}.</p>{% endif %}
+  {% if as_alternative %}<p class="small">It is also listed as an alternative of {{ as_alternative }} consumable{{ as_alternative|pluralize }}.</p>{% endif %}
+</section>
+
+{% if rows %}
+<form method="post" action="{% url 'consumable_remove_everywhere' consumable.pk %}" class="panel form narrow"
+      onsubmit="return confirm('Remove {{ consumable.name|escapejs }} from the chosen examinations? This cannot be undone.')">{% csrf_token %}
+  <h2>Remove it from examinations</h2>
+  <div class="field"><label for="modality">Remove from</label>
+    <select class="input" name="modality" id="modality">
+      <option value="">All modalities ({{ total }} examination{{ total|pluralize }})</option>
+      {% for r in rows %}<option value="{{ r.slug }}">{{ r.name }} only ({{ r.n }})</option>{% endfor %}
+    </select></div>
+  <div class="field field-check"><label class="check-label"><input class="check" type="checkbox" name="also_delete" value="1"> Also delete the consumable afterwards, if nothing else uses it</label>
+    <div class="help">Leave unticked to keep it in the consumables list (you can deactivate or delete it later).</div></div>
+  <button class="btn danger">Remove from examinations</button>
+</form>
+{% else %}
+<p class="narrow muted">Nothing to remove. You can now delete or deactivate it from the <a href="{% url 'consumable_list' %}">consumables list</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'inventory/base.html' %}
+{% block title %}{% if modality %}{{ modality.name }}{% else %}All examinations{% endif %}{% endblock %}
+{% block content %}
+<header class="page-head {% if modality %}mod-{{ modality.slug }}{% endif %}">
+  <h1>{% if modality %}<span class="dot"></span>{{ modality.name }} examinations{% else %}All examinations{% endif %}</h1>
+  <div class="actions">
+    <a class="btn" href="{% url 'export_excel' %}{% if modality %}?modality={{ modality.slug }}{% endif %}">Export to Excel</a>
+    {% if perm.can_edit %}<a class="btn primary" href="{% url 'exam_create' %}{% if modality %}?modality={{ modality.slug }}{% endif %}">Add examination</a>{% endif %}</div>
+</header>
+
+<form class="filters" method="get">
+  <input class="input grow" type="search" name="q" value="{{ q }}" placeholder="Search by name, code or subcategory">
+  <select class="input" name="status">
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+  </select>
+  <label class="check-label"><input class="check" type="checkbox" name="missing" value="1" {% if missing %}checked{% endif %}> Without consumables</label>
+  <button class="btn">Search</button>
+  {% if q or missing or status != 'active' %}<a class="btn ghost" href="{{ request.path }}">Clear</a>{% endif %}
+</form>
+
+{% if perm.can_edit %}<form id="bulkform" method="get" action="{% url 'bulk_apply' %}"></form>{% endif %}
+<div class="listbar">
+  <span class="muted small">{{ page.paginator.count }} examination(s)</span>
+  {% if perm.can_edit %}<span class="actions">
+    <label class="check-label small"><input class="check" type="checkbox" id="selectall"> Select all on this page</label>
+    <button class="btn small" form="bulkform">Apply consumables to selected</button>
+  </span>{% endif %}
+</div>
+<table class="table">
+  <thead><tr>{% if perm.can_edit %}<th class="sel"></th>{% endif %}{% if not modality %}<th>Modality</th>{% endif %}<th>Code</th><th>Examination</th><th>Subcategory</th><th class="right">Consumables</th><th></th></tr></thead>
+  <tbody>
+  {% for e in page %}
+  <tr class="{% if not e.is_active %}inactive{% endif %}">
+    {% if perm.can_edit %}<td class="sel">{% if e.is_active %}<input class="check rowsel" type="checkbox" form="bulkform" name="exam" value="{{ e.pk }}" aria-label="Select {{ e.name }}">{% endif %}</td>{% endif %}
+    {% if not modality %}<td><span class="chip mod-{{ e.modality.slug }}">{{ e.modality.name }}</span></td>{% endif %}
+    <td class="muted">{{ e.code }}</td>
+    <td><a href="{{ e.get_absolute_url }}">{{ e.name }}</a>{% if not e.is_active %} <span class="tag">inactive</span>{% endif %}</td>
+    <td class="muted">{{ e.subcategory }}</td>
+    <td class="right">{% if e.n_cons %}{{ e.n_cons }}{% else %}<span class="tag warn">none</span>{% endif %}</td>
+    <td class="right nowrap">
+      <a class="btn small" href="{{ e.get_absolute_url }}">Consumables</a>
+      {% if perm.can_edit %}
+      <a class="btn small ghost" href="{% url 'exam_edit' e.pk %}">Edit</a>
+      <form class="inline" method="post" action="{% url 'exam_toggle' e.pk %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn small ghost">{% if e.is_active %}Deactivate{% else %}Activate{% endif %}</button></form>
+      {% endif %}
+      {% if not e.is_active and perm.can_delete %}
+      <form class="inline" method="post" action="{% url 'exam_delete' e.pk %}" onsubmit="return confirm('Permanently delete {{ e.name|escapejs }}{% if e.n_cons %} and its {{ e.n_cons }} consumable assignment(s){% endif %}? This cannot be undone.')">{% csrf_token %}
+        <button class="btn small danger">Delete</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="7" class="empty">No examinations match. Change the search{% if perm.can_edit %} or <a href="{% url 'exam_create' %}">add an examination</a>{% endif %}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include 'inventory/_pager.html' %}
+<script>
+var selectAll = document.getElementById('selectall');
+if (selectAll) selectAll.addEventListener('change', function (e) {
+  document.querySelectorAll('.rowsel').forEach(function (c) { c.checked = e.target.checked; });
+});
+</script>
+{% endblock %}

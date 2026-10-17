@@ -1,0 +1,10 @@
+{% extends 'inventory/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<header class="page-head"><h1>{{ title }}</h1></header>
+<form method="post" class="panel form narrow">{% csrf_token %}
+  {% include 'inventory/_fields.html' %}
+  <div class="actions"><button class="btn primary">Save examination</button>
+  <a class="btn ghost" href="{% if exam %}{{ exam.get_absolute_url }}{% else %}{% url 'exam_list' %}{% endif %}">Cancel</a></div>
+</form>
+{% endblock %}

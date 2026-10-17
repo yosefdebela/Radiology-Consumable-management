@@ -1,0 +1,10 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Not allowed{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Not allowed</h1></header>
+<section class="panel narrow">
+  <p>{{ message }}</p>
+  <p class="muted small">You are signed in as {{ request.user.username }} ({{ perm.role }}).</p>
+  <a class="btn" href="{% url 'dashboard' %}">Back to the dashboard</a>
+</section>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Saved sets{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Saved sets</h1>
+  <p class="muted">Named lists of consumables, built on their own and applied to examinations when needed.</p></div>
+  {% if perm.can_edit %}<div class="actions"><a class="btn primary" href="{% url 'set_create' %}">New set</a></div>{% endif %}</header>
+<form class="filters" method="get">
+  <input class="input grow" type="search" name="q" value="{{ q }}" placeholder="Search sets">
+  <select class="input" name="status">
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+  </select>
+  <button class="btn">Search</button>
+</form>
+<table class="table">
+  <thead><tr><th>Set</th><th class="right">Consumables</th><th></th></tr></thead>
+  <tbody>
+  {% for s in sets %}
+  <tr class="{% if not s.is_active %}inactive{% endif %}">
+    <td><a href="{{ s.get_absolute_url }}"><strong>{{ s.name }}</strong></a>{% if not s.is_active %} <span class="tag">inactive</span>{% endif %}
+      {% if s.description %}<div class="muted small">{{ s.description }}</div>{% endif %}</td>
+    <td class="right">{{ s.n_items }}</td>
+    <td class="right nowrap">
+      <a class="btn small" href="{{ s.get_absolute_url }}">Open</a>
+      {% if perm.can_edit and s.is_active and s.n_items %}<a class="btn small ghost" href="{% url 'bulk_apply' %}?set={{ s.pk }}">Apply to examinations</a>{% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="3" class="empty">No sets yet.{% if perm.can_edit %} <a href="{% url 'set_create' %}">Create the first one</a>, or open an examination and use "Save as set".{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

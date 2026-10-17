@@ -1,0 +1,17 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Consumable categories{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Consumable categories</h1></header>
+<div class="two-col">
+<section class="panel">
+  <table class="table"><thead><tr><th>Category</th><th class="right">Consumables</th><th></th></tr></thead><tbody>
+  {% for c in categories %}
+  <tr><td>{{ c.name }}</td><td class="right">{{ c.n }}</td>
+    <td class="right"><form class="inline" method="post" action="{% url 'category_delete' c.pk %}" onsubmit="return confirm('Delete this category? Its consumables become uncategorized.')">{% csrf_token %}<button class="btn small danger">Delete</button></form></td></tr>
+  {% empty %}<tr><td colspan="3" class="empty">No categories yet.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<form method="post" class="panel form"><h2>Add category</h2>{% csrf_token %}
+  {% include 'inventory/_fields.html' %}<button class="btn primary">Add category</button></form>
+</div>
+{% endblock %}

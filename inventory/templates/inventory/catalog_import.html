@@ -1,0 +1,48 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Consumables list from Excel{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Consumables list from Excel</h1>
+  <p class="muted">{{ total }} item{{ total|pluralize }} in the list. These power the suggestions on the Add consumable form.</p></div>
+  <div class="actions"><a class="btn" href="{% url 'catalog_template' %}">Download Excel template</a></div></header>
+
+{% if report %}
+<section class="panel">
+  <h2>Last import</h2>
+  <ul class="plain">
+    <li><strong>{{ report.new }}</strong> new, <strong>{{ report.updated }}</strong> changed{% if report.skipped %}, <strong>{{ report.skipped }}</strong> row(s) skipped (empty or too-long name){% endif %}.</li>
+    {% if report.consumables_added %}<li><strong>{{ report.consumables_added }}</strong> added as consumables.</li>{% endif %}
+    {% if report.categories_created %}<li><strong>{{ report.categories_created }}</strong> new categor{{ report.categories_created|pluralize:"y,ies" }} created.</li>{% endif %}
+    {% if report.units_created %}<li>New unit(s) created: {{ report.units_created|join:", " }}. Check them under Units.</li>{% endif %}
+    <li>Sheets read: {{ report.sheets_used|join:", "|default:"none" }}.{% if report.sheets_skipped %} Skipped (no name column): {{ report.sheets_skipped|join:", " }}.{% endif %}</li>
+  </ul>
+</section>
+{% endif %}
+
+<div class="two-col">
+<form method="post" enctype="multipart/form-data" class="panel form"><h2>Upload your list</h2>{% csrf_token %}
+  <div class="field"><label for="file">Excel file (.xlsx)</label><input class="input" type="file" name="file" id="file" accept=".xlsx" required></div>
+  <div class="field field-check"><label class="check-label"><input class="check" type="checkbox" name="add_all" value="1"> Also add every item as a consumable right now</label>
+    <div class="help">Leave unticked to keep the list as suggestions only. Items are added to consumables when someone picks them in the Add consumable form.</div></div>
+  <button class="btn primary">Import list</button>
+  <p class="muted small">Importing again is safe: existing items are updated, nothing is deleted.</p>
+</form>
+<section class="panel"><h2>What the file should look like</h2>
+  <p class="small">One row per consumable, with a header row. Column names are matched flexibly.</p>
+  <table class="table"><thead><tr><th>Column</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td><strong>Name</strong></td><td>Required. Also accepted: Consumable, Item, Material, Product</td></tr>
+    <tr><td>Category</td><td>Created if new. Also: Type, Group</td></tr>
+    <tr><td>Unit</td><td>ml, vial, piece, pair, bottle, pack... Also: UOM</td></tr>
+    <tr><td>Description</td><td>Optional. Also: Notes, Specification</td></tr>
+    <tr><td>Alternatives</td><td>Optional. Items that can replace this one. Separate several with a semicolon (;). Also: Substitute</td></tr>
+  </tbody></table>
+</section>
+</div>
+
+{% if sample %}
+<section class="panel"><h2>A few items from the list</h2>
+  <table class="table"><thead><tr><th>Name</th><th>Category</th><th>Unit</th></tr></thead><tbody>
+  {% for i in sample %}<tr><td>{{ i.name }}</td><td>{{ i.category|default:"-" }}</td><td>{{ i.default_unit|default:"-" }}</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Dashboard</h1>
+  {% if perm.can_edit %}<div class="actions"><a class="btn" href="{% url 'exam_create' %}">Add examination</a>
+  <a class="btn primary" href="{% url 'consumable_create' %}">Add consumable</a></div>{% endif %}</header>
+
+<section class="coverage">
+  <div class="coverage-main">
+    <div class="coverage-figure">{{ covered_pct }}%</div>
+    <div>
+      <h2>of examinations have consumables assigned</h2>
+      <p class="muted">{{ missing_count }} of {{ total_exams }} active examinations still need a consumables list.</p>
+      <a href="{% url 'exam_list' %}?missing=1">Show examinations without consumables</a>
+    </div>
+  </div>
+  <div class="coverage-bars">
+    {% for row in modalities %}
+    <a class="bar-row mod-{{ row.obj.slug }}" href="{{ row.obj.get_absolute_url }}?missing=1">
+      <span class="bar-name">{{ row.obj.name }}</span>
+      <span class="bar"><span class="bar-fill" style="width: {{ row.pct }}%"></span></span>
+      <span class="bar-num">{{ row.covered }}/{{ row.total }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="stats">
+  <a class="stat" href="{% url 'exam_list' %}"><span class="stat-n">{{ total_exams }}</span><span class="stat-l">Total examinations</span></a>
+  {% for row in modalities %}
+  <a class="stat mod-{{ row.obj.slug }}" href="{{ row.obj.get_absolute_url }}"><span class="stat-n">{{ row.total }}</span>
+    <span class="stat-l">{% if row.obj.slug == 'ct' %}Total CT examinations
+      {% elif row.obj.slug == 'mri' %}Total MRI examinations
+      {% elif row.obj.slug == 'ultrasound' %}Total ultrasound examinations
+      {% elif row.obj.slug == 'x-ray' %}Total X-ray examinations
+      {% elif row.obj.slug == 'special-x-ray' %}Total special X-ray procedures
+      {% else %}Total {{ row.obj.name }} examinations{% endif %}</span></a>
+  {% endfor %}
+  <a class="stat" href="{% url 'consumable_list' %}"><span class="stat-n">{{ total_consumables }}</span><span class="stat-l">Total consumables</span></a>
+  <a class="stat warn" href="{% url 'exam_list' %}?missing=1"><span class="stat-n">{{ missing_count }}</span><span class="stat-l">Examinations without consumables</span></a>
+</section>
+
+{% if missing_sample %}
+<section class="panel">
+  <h2>Next to fill in</h2>
+  <table class="table"><tbody>
+    {% for e in missing_sample %}
+    <tr><td><span class="chip mod-{{ e.modality.slug }}">{{ e.modality.name }}</span></td>
+        <td><a href="{{ e.get_absolute_url }}">{{ e.name }}</a></td>
+        <td class="right"><a class="btn small" href="{{ e.get_absolute_url }}">{% if perm.can_edit %}Add consumables{% else %}View{% endif %}</a></td></tr>
+    {% endfor %}
+  </tbody></table>
+</section>
+{% endif %}
+{% if inactive_exams or inactive_consumables %}
+<p class="muted small">Not counted above: {{ inactive_exams }} inactive examination(s), {{ inactive_consumables }} inactive consumable(s).</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'inventory/auth_base.html' %}
+{% block title %}First-time setup{% endblock %}
+{% block content %}
+<h1>Welcome</h1>
+<p class="muted">Create the administrator account. The administrator adds the other users and decides what each of them may change.</p>
+<form method="post" class="form">{% csrf_token %}
+  {% include 'inventory/_fields.html' %}
+  <button class="btn primary wide">Create administrator</button>
+</form>
+{% endblock %}

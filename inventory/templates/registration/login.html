@@ -1,0 +1,14 @@
+{% extends 'inventory/auth_base.html' %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<h1>Sign in</h1>
+{% if locked %}<div class="msg error">Too many wrong passwords. Please wait 15 minutes, then try again, or ask an administrator to reset your password.</div>{% endif %}
+<form method="post" class="form">{% csrf_token %}
+  {% if form.non_field_errors and not locked %}<div class="msg error">{{ form.non_field_errors.0 }}</div>{% endif %}
+  <div class="field"><label for="id_username">Username</label><input class="input" type="text" name="username" id="id_username" autofocus autocomplete="username" required></div>
+  <div class="field"><label for="id_password">Password</label><input class="input" type="password" name="password" id="id_password" autocomplete="current-password" required></div>
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="btn primary wide">Sign in</button>
+</form>
+<p class="muted small">Forgot your password? Ask an administrator to set a new one.</p>
+{% endblock %}

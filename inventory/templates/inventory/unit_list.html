@@ -1,0 +1,21 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Units{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Units</h1></header>
+<div class="two-col">
+<section class="panel">
+  <table class="table"><thead><tr><th>Unit</th><th>Quantities</th><th></th></tr></thead><tbody>
+  {% for u in units %}
+  <tr class="{% if not u.is_active %}inactive{% endif %}"><td>{{ u.name }}{% if not u.is_active %} <span class="tag">inactive</span>{% endif %}</td>
+    <td>{% if u.allow_decimals %}Decimals allowed{% else %}Whole numbers{% endif %}</td>
+    <td class="right nowrap"><a class="btn small ghost" href="{% url 'unit_edit' u.pk %}">Edit</a>
+      <form class="inline" method="post" action="{% url 'unit_toggle' u.pk %}">{% csrf_token %}<button class="btn small ghost">{% if u.is_active %}Deactivate{% else %}Activate{% endif %}</button></form></td></tr>
+  {% endfor %}
+  </tbody></table>
+  <p class="muted small">Quantities are whole numbers by default. Edit a unit to allow decimals (for example 0.5 vial).</p>
+  <p class="muted small">Units already used by an examination are never deleted, only deactivated.</p>
+</section>
+<form method="post" class="panel form"><h2>Add unit</h2>{% csrf_token %}
+  {% include 'inventory/_fields.html' %}<button class="btn primary">Add unit</button></form>
+</div>
+{% endblock %}

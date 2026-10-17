@@ -1,0 +1,22 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Users</h1>
+  <div class="actions"><a class="btn primary" href="{% url 'user_create' %}">Add user</a></div></header>
+<table class="table">
+  <thead><tr><th>Username</th><th>Name</th><th>Access</th><th>Last sign-in</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr class="{% if not u.is_active %}inactive{% endif %}">
+    <td><strong>{{ u.username }}</strong>{% if u == request.user %} <span class="tag">you</span>{% endif %}{% if not u.is_active %} <span class="tag">inactive</span>{% endif %}</td>
+    <td>{{ u.first_name|default:"-" }}</td>
+    <td>{{ u.role }}</td>
+    <td class="muted">{{ u.last_login|date:"Y-m-d H:i"|default:"never" }}</td>
+    <td class="right nowrap"><a class="btn small ghost" href="{% url 'user_edit' u.pk %}">Edit</a>
+      <a class="btn small ghost" href="{% url 'user_password' u.pk %}">Reset password</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted small">Standard users can always view. Open Edit to allow adding data, changing consumables that were already entered, or deleting. Accounts are deactivated, never deleted, so history stays intact.</p>
+{% endblock %}

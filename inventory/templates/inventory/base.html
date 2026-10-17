@@ -1,0 +1,64 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="application-name" content="Radiology consumables">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Radiology consumables{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'inventory/app.css' %}">
+<style>{% for m in nav_modalities %}.mod-{{ m.slug }}{--m:{{ m.color }}}{% endfor %}</style>
+</head>
+<body>
+<input type="checkbox" id="navtoggle" class="navtoggle">
+<label for="navtoggle" class="menu-btn" aria-label="Toggle navigation">Menu</label>
+<aside class="sidebar">
+  <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark"></span>Radiology<br>consumables</a>
+  {% with rn=request.resolver_match.url_name %}
+  <nav>
+    <a class="nav-link {% if rn == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+
+    <div class="nav-group">Examinations</div>
+    <a class="nav-link {% if rn == 'exam_list' or rn == 'exam_detail' or rn == 'exam_edit' or rn == 'exam_create' %}active{% endif %}" href="{% url 'exam_list' %}">All examinations</a>
+    {% for m in nav_modalities %}
+    <a class="nav-link sub mod-{{ m.slug }} {% if request.resolver_match.kwargs.slug == m.slug %}active{% endif %}" href="{{ m.get_absolute_url }}">
+      <span class="dot"></span>{{ m.name }}<span class="count">{{ m.active_count }}</span></a>
+    {% endfor %}
+
+    <div class="nav-group">Consumables</div>
+    <a class="nav-link {% if rn == 'consumable_list' or rn == 'consumable_edit' %}active{% endif %}" href="{% url 'consumable_list' %}">All consumables</a>
+    <a class="nav-link {% if rn == 'set_list' or rn == 'set_detail' or rn == 'set_create' or rn == 'set_edit' %}active{% endif %}" href="{% url 'set_list' %}">Saved sets</a>
+    {% if perm.can_edit %}
+    <a class="nav-link {% if rn == 'consumable_create' %}active{% endif %}" href="{% url 'consumable_create' %}">Add consumable</a>
+    <a class="nav-link {% if rn == 'catalog_import' %}active{% endif %}" href="{% url 'catalog_import' %}">Import list from Excel</a>
+    <a class="nav-link {% if rn == 'bulk_apply' %}active{% endif %}" href="{% url 'bulk_apply' %}">Apply to many examinations</a>
+    {% endif %}
+
+    <div class="nav-group">Tools</div>
+    <a class="nav-link {% if rn == 'export_excel' %}active{% endif %}" href="{% url 'export_excel' %}">Export to Excel</a>
+    {% if perm.can_edit %}
+    <a class="nav-link {% if rn == 'modality_list' or rn == 'modality_edit' %}active{% endif %}" href="{% url 'modality_list' %}">Modalities</a>
+    <a class="nav-link {% if rn == 'category_list' %}active{% endif %}" href="{% url 'category_list' %}">Categories</a>
+    <a class="nav-link {% if rn == 'unit_list' or rn == 'unit_edit' %}active{% endif %}" href="{% url 'unit_list' %}">Units</a>
+    {% endif %}
+    {% if perm.is_admin %}
+    <a class="nav-link {% if rn == 'user_list' or rn == 'user_create' or rn == 'user_edit' or rn == 'user_password' %}active{% endif %}" href="{% url 'user_list' %}">Users</a>
+    {% endif %}
+  </nav>
+  {% if request.user.is_authenticated %}
+  <div class="userbox">
+    <a class="user-name" href="{% url 'profile' %}">{{ request.user.get_full_name|default:request.user.username }}</a>
+    <div class="user-role">{{ perm.role }}</div>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn small ghost signout">Sign out</button></form>
+  </div>
+  {% endif %}
+  {% endwith %}
+</aside>
+<main class="content">
+  {% if messages %}
+  <div class="messages">{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}</div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+<script src="{% static 'inventory/app.js' %}"></script>
+</body>
+</html>

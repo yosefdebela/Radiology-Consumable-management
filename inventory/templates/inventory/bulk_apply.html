@@ -1,0 +1,134 @@
+{% extends 'inventory/base.html' %}
+{% block title %}Apply consumables to many examinations{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Apply consumables to many examinations</h1>
+  <p class="muted">Pick the examinations, then copy a finished list from another examination, add consumables from the dropdowns, or both.</p></div></header>
+
+<form method="post" id="bulk">{% csrf_token %}
+
+<section class="panel">
+  <h2>1. Choose examinations <span class="muted small" id="picked">(0 selected)</span></h2>
+  <div class="filters">
+    <select class="input" id="f-mod">
+      <option value="">All modalities</option>
+      {% for m in modalities %}<option value="{{ m.slug }}" {% if start_modality == m.slug %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+    </select>
+    <input class="input grow" type="search" id="f-q" placeholder="Filter by name or code">
+    <label class="check-label"><input class="check" type="checkbox" id="f-empty"> Only without consumables</label>
+    <button type="button" class="btn small" id="sel-all">Select all {{ exams|length }} examinations</button>
+    <button type="button" class="btn small" id="sel-shown">Select shown only</button>
+    <button type="button" class="btn small ghost" id="sel-none">Clear selection</button>
+  </div>
+  <div class="picklist" id="picklist">
+    {% for e in exams %}
+    <label class="pick" data-mod="{{ e.modality.slug }}" data-n="{{ e.n_cons }}" data-text="{{ e.name|lower }} {{ e.code|lower }}">
+      <input class="check pickbox" type="checkbox" name="exams" value="{{ e.pk }}" {% if e.pk in preselected %}checked{% endif %}>
+      <span class="chip mod-{{ e.modality.slug }}">{{ e.modality.name }}</span>
+      <span class="pick-name">{{ e.name }}</span>
+      <span class="muted small">{% if e.n_cons %}{{ e.n_cons }} consumable{{ e.n_cons|pluralize }}{% else %}none yet{% endif %}</span>
+    </label>
+    {% endfor %}
+    <p class="empty" id="pick-empty" hidden>No examination matches the filter.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>2. Copy a list from an examination <span class="muted small">(optional)</span></h2>
+  <select class="input narrow-input" name="source">
+    <option value="">Do not copy</option>
+    {% for s in sources %}<option value="{{ s.pk }}" {% if posted_source == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.modality.name }}: {{ s.name }}</option>{% endfor %}
+  </select>
+</section>
+
+<section class="panel">
+  <h2>2b. Apply a saved set <span class="muted small">(optional)</span></h2>
+  <select class="input narrow-input" name="set">
+    <option value="">No saved set</option>
+    {% for s in sets %}<option value="{{ s.pk }}" {% if posted_set == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.name }} ({{ s.items.count }} consumable{{ s.items.count|pluralize }})</option>{% endfor %}
+  </select>
+  <p class="muted small">Build sets under Saved sets. If the same consumable is in several places, typed rows win over the set, and the set wins over a copied examination.</p>
+</section>
+
+<section class="panel">
+  <h2>3. Add consumables <span class="muted small">(optional)</span></h2>
+  <table class="table" id="rows">
+    <thead><tr><th>Consumable</th><th>Quantity</th><th>Unit</th><th>Type</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr class="row">
+      <td><select class="input r-cons" name="row_consumable"><option value="">Choose a consumable</option>
+        {% for c in consumables %}<option value="{{ c.pk }}" {% if r.consumable == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></td>
+      <td><input class="input qty" type="number" step="1" min="1" name="row_quantity" value="{{ r.quantity }}"></td>
+      <td><select class="input r-unit unit-sel" name="row_unit"><option value="">Unit</option>
+        {% for u in units %}<option value="{{ u.pk }}" data-dec="{% if u.allow_decimals %}1{% else %}0{% endif %}" {% if r.unit == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select></td>
+      <td><select class="input" name="row_required"><option value="1" {% if r.required == '1' %}selected{% endif %}>Required</option><option value="0" {% if r.required == '0' %}selected{% endif %}>Optional</option></select></td>
+      <td><input class="input" type="text" maxlength="255" name="row_notes" value="{{ r.notes }}" placeholder="Optional note"></td>
+      <td class="right"><button type="button" class="btn small ghost r-del">Remove</button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><button type="button" class="btn small" id="add-row">Add another consumable</button></p>
+</section>
+
+<section class="panel">
+  <h2>If an examination already has a consumable</h2>
+  <label class="check-label"><input class="check" type="radio" name="conflict" value="skip" {% if not overwrite %}checked{% endif %}> Leave it as it is</label><br>
+  {% if perm.can_change %}<label class="check-label"><input class="check" type="radio" name="conflict" value="overwrite" {% if overwrite %}checked{% endif %}> Replace its quantity, unit, type and notes with these values</label>{% else %}<span class="muted small">Replacing values that were already entered needs permission to change entered consumables.</span>{% endif %}
+</section>
+
+<div class="actions"><button class="btn primary">Apply to selected examinations</button>
+  <a class="btn ghost" href="{% url 'exam_list' %}">Cancel</a></div>
+</form>
+
+{{ consumable_units|json_script:"cunits" }}
+<script>
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.pickbox'));
+  var picks = Array.prototype.slice.call(document.querySelectorAll('.pick'));
+  var fMod = document.getElementById('f-mod'), fQ = document.getElementById('f-q'), fE = document.getElementById('f-empty');
+  function shown(p) { return !p.hidden; }
+  function count() { document.getElementById('picked').textContent = '(' + boxes.filter(function (b) { return b.checked; }).length + ' selected)'; }
+  function filter() {
+    var q = fQ.value.trim().toLowerCase(), any = false;
+    picks.forEach(function (p) {
+      var ok = (!fMod.value || p.dataset.mod === fMod.value) && (!q || p.dataset.text.indexOf(q) !== -1) && (!fE.checked || p.dataset.n === '0');
+      p.hidden = !ok; if (ok) any = true;
+    });
+    document.getElementById('pick-empty').hidden = any;
+  }
+  [fMod, fQ, fE].forEach(function (el) { el.addEventListener('input', filter); el.addEventListener('change', filter); });
+  document.getElementById('sel-shown').onclick = function () { picks.filter(shown).forEach(function (p) { p.querySelector('input').checked = true; }); count(); };
+  document.getElementById('sel-all').onclick = function () { boxes.forEach(function (b) { b.checked = true; }); count(); };
+  document.getElementById('sel-none').onclick = function () { boxes.forEach(function (b) { b.checked = false; }); count(); };
+  boxes.forEach(function (b) { b.addEventListener('change', count); });
+  filter(); count();
+  document.getElementById('bulk').addEventListener('submit', function (e) {
+    var n = boxes.filter(function (b) { return b.checked; }).length;
+    if (n > 25 && !confirm('Apply to ' + n + ' examinations?')) e.preventDefault();
+  });
+
+  var units = JSON.parse(document.getElementById('cunits').textContent);
+  var tbody = document.querySelector('#rows tbody');
+  tbody.addEventListener('change', function (e) {
+    if (e.target.classList.contains('r-cons') && units[e.target.value]) {
+      var u = e.target.closest('tr').querySelector('.r-unit');
+      u.value = units[e.target.value];
+      u.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+  });
+  tbody.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('r-del')) return;
+    var rows = tbody.querySelectorAll('tr.row');
+    if (rows.length > 1) e.target.closest('tr').remove();
+    else rows[0].querySelectorAll('select,input').forEach(function (i) { if (i.type === 'number') i.value = 1; else if (i.tagName === 'SELECT') i.selectedIndex = 0; else i.value = ''; });
+  });
+  document.getElementById('add-row').onclick = function () {
+    var last = tbody.querySelector('tr.row:last-child'), c = last.cloneNode(true);
+    c.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+    c.querySelectorAll('input').forEach(function (i) { i.value = i.type === 'number' ? 1 : ''; });
+    tbody.appendChild(c);
+  };
+})();
+</script>
+{% endblock %}
